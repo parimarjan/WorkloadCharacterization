@@ -24,7 +24,10 @@ def extract_sql(qid):
     page = requests.get(furl)
     soup = BeautifulSoup(page.content, "html.parser")
     info = soup.find("textarea", {"name": "sql"})
-    return info.text
+    if info is not None and info.text is not None:
+        return info.text
+    else:
+        return ""
 
 def is_int(num):
     try:
@@ -41,7 +44,7 @@ def download_all_sqls_in_page(pagenum, dummy):
     print("Status: ", status)
     sqlnum = 0
     for link in BeautifulSoup(response, parse_only=SoupStrainer('a')):
-        print(type(link))
+        # print(type(link))
         if isinstance(link, bs4.element.Doctype):
             continue
 
@@ -54,6 +57,10 @@ def download_all_sqls_in_page(pagenum, dummy):
                 qend = clink.find("/")
                 print(clink)
                 qid = clink[0:qend]
+                fn = FN_TMP.format(pg=pagenum, snum = sqlnum, qid=qid)
+                if os.path.exists(fn):
+                    continue
+
                 if is_int(qid):
                     print(int(qid))
                     sql = extract_sql(qid)
@@ -62,7 +69,6 @@ def download_all_sqls_in_page(pagenum, dummy):
                     print("**********")
                     # TO SAVE
                     sqlnum += 1
-                    fn = FN_TMP.format(pg=pagenum, snum = sqlnum, qid=qid)
                     with open(fn, "w") as f:
                         f.write(sql)
                 else:
@@ -75,5 +81,5 @@ par_args = []
 for i in range(start_page, end_page+1,1):
     par_args.append((i, "test"))
 
-pool = ThreadPool(4)
+pool = ThreadPool(120)
 pool.starmap(download_all_sqls_in_page, par_args)
