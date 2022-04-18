@@ -2096,7 +2096,7 @@ def parse_sqls_single(sqls, batchnum=0, cols_to_tables={}):
         # preds["alias"] = preds.apply(lambda x: x["input"], axis=1)
         # inputs = preds.apply(lambda x: remove_ints(x["input"]) ,axis=1)
         # preds["input"] = inputs
-        preds["jobid"] = batchnum*si + si
+        preds["jobid"] = batchnum*len(sqls) + si
 
         if len(preds) == 0:
             continue
@@ -2148,7 +2148,7 @@ def parse_sqls_par(sqls, cols_to_tables={}):
     # num_par = max(1, num_par)
     # num_par = min(num_par, 64)
 
-    fsize = 1000
+    fsize = 20000
     sframes = [sqls[i*fsize:min((i+1)*fsize,len(sqls))] for i in
             range(int(len(sqls)/fsize) + 1)]
     print("number of sql groups: ", len(sframes))
