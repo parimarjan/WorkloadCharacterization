@@ -3,7 +3,8 @@ import psycopg2 as pg
 import os
 import pdb
 
-WK = "tpch1"
+# WK = "tpch1"
+WK = "ceb"
 # WK = "tpcds1G"
 #WK = "tpcds"
 #WK = "job"
@@ -23,6 +24,7 @@ WORKLOADS["tpcds1G"] = "data/tpcds1/all/"
 WORKLOADS["tpch"] = "data/tpch/all/"
 WORKLOADS["tpch1"] = "data/tpch1/all/"
 WORKLOADS["job"] = "data/job/all_job/sqls"
+WORKLOADS["ceb"] = "data/ceb-all/sqls/"
 
 QDIR = WORKLOADS[WK]
 DATADIR = os.path.join(QDIR, "dfs")
@@ -42,7 +44,6 @@ def get_rowcount(sql):
     except Exception as e:
         print(e)
         print(sql)
-        # pdb.set_trace()
         return -1,-1
 
     output = cursor.fetchall()
@@ -61,7 +62,6 @@ def get_rowcounts(sqls):
     rcs = []
     totals = []
     for si, sql in enumerate(sqls):
-        print(si)
         rc,total = get_rowcount(sql)
         rcs.append(rc)
         totals.append(total)
@@ -72,9 +72,9 @@ sqls = exprdf["filtersql"].values
 print("going to execute ", len(sqls))
 rowcs,totals = get_rowcounts(sqls)
 
+### update estimates
 exprdf["RowCount"] = rowcs
 exprdf["InputCardinality"] = totals
-
 tmp = exprdf[exprdf["RowCount"] == -1]
 print("Number of failed expressions: ", len(tmp))
 exprdf["Selectivity"] = exprdf.apply(lambda x: float(x["RowCount"]) / x["InputCardinality"] ,axis=1)
