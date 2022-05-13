@@ -1,4 +1,5 @@
 import os
+import sys
 import pandas as pd
 import time
 import psycopg2 as pg
@@ -6,6 +7,8 @@ import numpy as np
 
 import argparse
 import pdb
+import uuid
+import logging
 
 NEW_NAME_FMT = "{INP}_{DATA_KIND}"
 
@@ -20,11 +23,15 @@ WORKLOADS["ceb"] = "data/ceb-all/sqls/"
 
 ALIAS_TO_TABS = {}
 ALIAS_TO_TABS["n"] = "name"
+ALIAS_TO_TABS["n2"] = "name"
 ALIAS_TO_TABS["mi"] = "movie_info"
 ALIAS_TO_TABS["t"] = "title"
 
 def read_flags():
     parser = argparse.ArgumentParser()
+
+    parser.add_argument("--result_dir", type=str, required=False,
+            default="./results")
     parser.add_argument("--inp_to_eval", type=str, required=False,
             default="n")
 
@@ -33,6 +40,9 @@ def read_flags():
 
     parser.add_argument("--reps", type=int, required=False,
             default=3)
+
+    parser.add_argument("--num_queries", type=int, required=False,
+            default=-1)
 
     parser.add_argument("--workload", type=str, required=False,
             default="ceb")
@@ -53,7 +63,7 @@ def read_flags():
     return parser.parse_args()
 
 
-LOG_FMT = "{EHASH}-{INP}-{REP} --> {TIME}"
+LOG_FMT = "{EHASH} - {INP} - {REP} --> {TIME}"
 
 def run_filters(sqls, ehashes, inputs):
     exec_times = []
@@ -73,13 +83,14 @@ def run_filters(sqls, ehashes, inputs):
                 new_tab = NEW_NAME_FMT.format(INP = inp,
                                               DATA_KIND = args.data_kind)
                 sql = sql.replace(table_name, new_tab, 1)
+                # print(sql)
 
             start = time.time()
             try:
                 cursor.execute(sql)
             except Exception as e:
-                print(e)
-                print(sql)
+                logging.error(str(e))
+                logging.error(sql)
                 pdb.set_trace()
 
             output = cursor.fetchall()
@@ -89,12 +100,12 @@ def run_filters(sqls, ehashes, inputs):
             exec_times.append(exec_time)
             logline = LOG_FMT.format(EHASH=eh, INP = inp, REP = ri,
                     TIME = exec_time)
-            print(logline)
+            logging.info(logline)
 
             if len(rcs) != len(sqls):
                 rcs.append(rc)
 
-    print("Total execution time: ", np.sum(exec_times))
+    logging.info("Total execution time: {}".format(np.sum(exec_times)))
 
     return rcs
 
@@ -103,6 +114,25 @@ def qerr_func(ytrue, yhat):
     return errors
 
 def main():
+
+    filename = uuid.uuid4().hex + ".log"
+    filename = os.path.join(args.result_dir, filename)
+    # logging.basicConfig(filename=filename, filemode='w', format='%(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+    # handler = logging.StreamHandler(sys.stdout)
+    # handler.setLevel(logging.INFO)
+
+    file_handler = logging.FileHandler(filename=filename)
+    stdout_handler = logging.StreamHandler(sys.stdout)
+    file_handler.setLevel(logging.INFO)
+    stdout_handler.setLevel(logging.INFO)
+
+    handlers = [file_handler, stdout_handler]
+    logging.basicConfig(
+        level=logging.INFO,
+        format='[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s',
+        handlers=handlers
+    )
+
     QDIR = WORKLOADS[args.workload]
     DATADIR = os.path.join(QDIR, "dfs")
     EXPRFN = os.path.join(DATADIR, "expr_df.csv")
@@ -112,8 +142,12 @@ def main():
     exprdf = exprdf[exprdf.input.isin(inps)]
     exprdf = exprdf[~exprdf["filtersql"].str.contains("like")]
     exprdf = exprdf[~exprdf["filtersql"].str.contains("LIKE")]
-    exprdf = exprdf.head(100)
-    print("Number of sqls to evaluate: ", len(exprdf))
+
+    if args.num_queries != -1 and args.num_queries < len(exprdf):
+        exprdf = exprdf.head(args.num_queries)
+
+    logging.info(str(args))
+    logging.info("Number of sqls to evaluate: {}".format(len(exprdf)))
 
     sqls = exprdf["filtersql"].values
     ehashes = exprdf["exprhash"].values
@@ -125,7 +159,7 @@ def main():
     rcs = np.maximum(1, rcs)
 
     qerrs = qerr_func(truey, rcs)
-    print("QError, mean: {}, median: {}, 90p: {}".format(
+    logging.info("QError, mean: {}, median: {}, 90p: {}".format(
         np.mean(qerrs), np.median(qerrs), np.percentile(qerrs, 90)))
 
 
@@ -133,8 +167,6 @@ def main():
     for qi, rc in enumerate(rcs):
         if rc == 1:
             print(sqls[qi])
-
-    pdb.set_trace()
 
 args = read_flags()
 main()

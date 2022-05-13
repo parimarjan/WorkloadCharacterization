@@ -2001,31 +2001,6 @@ def ops_to_expr_df_singleq(df):
         elif "select" in filterexpr:
             filtersql = "X"
         else:
-            # if "d2" in filterexpr:
-                # print("!!!!!!!!!")
-                # print(tab, al)
-                # print(filterexpr)
-                # print("!!!!!!!!!")
-
-            # if "d1" in filterexpr and "d2" in filterexpr:
-                # print("!!!!!!!!!")
-                # print(tab, al)
-                # print(filterexpr)
-                # print("!!!!!!!!!")
-
-            # if "." in filterexpr:
-                # exal = filterexpr[0:filterexpr.find(".")]
-                # if exal != al:
-                    # print("!!!!!!!!!")
-                    # print(exal)
-                    # print(al)
-                    # print(tab)
-                    # print(filterexpr)
-                    # print("!!!!!!!!!")
-                # print(tab)
-                # print(al)
-                # print(filterexpr)
-
             filtersql = COUNT_TMP.format(TABLE=tab,
                                          ALIAS = al,
                                          FILTER = filterexpr)
