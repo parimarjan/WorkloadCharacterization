@@ -58,7 +58,7 @@ def read_flags():
     parser.add_argument("--pwd", type=str, required=False,
             default="password")
     parser.add_argument("--port", type=int, required=False,
-            default=5432)
+            default=5434)
 
     return parser.parse_args()
 

@@ -1,6 +1,7 @@
 import argparse
 import pandas as pd
 import numpy as np
+import string
 
 import psycopg2 as pg
 import os
@@ -22,10 +23,11 @@ ALIAS_TO_TABS["t"] = "title"
 
 CREATE_TEMPLATE = "CREATE TABLE {TABLE_NAME} AS {SEL_SQL}"
 
-DROP_TEMPLATE = "DROP TABLE IF EXISTS {TABLE_NAME}"
 NEW_NAME_FMT = "{INP}_{DATA_KIND}"
+DROP_TEMPLATE = "DROP TABLE IF EXISTS {TABLE_NAME}"
 ENGINE_CMD_FMT = """postgresql://{USER}:{PWD}@{HOST}:{PORT}/{DB}"""
 
+NULL_VAL = "#NULL1234"
 # WK = "tpch1"
 WK = "ceb"
 #WK = "tpcds1G"
@@ -41,7 +43,7 @@ else:
 
 USER="ceb"
 DBHOST="localhost"
-PORT=5432
+PORT=5434
 PWD="password"
 
 WORKLOADS = {}
@@ -52,7 +54,6 @@ WORKLOADS["tpch"] = "data/tpch/all/"
 WORKLOADS["tpch1"] = "data/tpch1/all/"
 WORKLOADS["job"] = "data/job/all_job/sqls"
 WORKLOADS["ceb"] = "data/ceb-all/sqls/"
-
 
 def read_flags():
     parser = argparse.ArgumentParser()
@@ -99,8 +100,20 @@ def main():
     cursor.close()
     con.close()
 
-    if "shuffle" in args.data_kind:
+
+    if "shuffle2" in args.data_kind:
         df = df.sample(frac=1.0)
+
+        for k in df.keys():
+            df[k] = df[k].apply(lambda x: x if pd.notnull(x) else
+                    ''.join(random.choice(string.ascii_uppercase
+                        + string.digits) for _ in range(random.randint(1,50))))
+
+        print("done updating NULL values w/ random strings")
+
+    elif "shuffle" in args.data_kind:
+        df = df.sample(frac=1.0)
+
 
     if args.data_kind == "true_cols":
         inp_table = ALIAS_TO_TABS[basetable]
@@ -143,7 +156,9 @@ def main():
 
         for key in df.keys():
             domain = list(set(df[key].dropna()))
-            domain.append(None)
+            print(domain)
+            print(len(domain))
+            # domain.append(None)
             df[key] = np.array([random.choice(domain) for _ in range(len(df))])
 
         # df = newdf
@@ -190,7 +205,6 @@ def main():
                                            HOST = DBHOST,
                                            PORT = PORT,
                                            DB = DBNAME)
-
         engine = create_engine(engine_cmd)
         df.to_sql(new_table_name, engine)
 

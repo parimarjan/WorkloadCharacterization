@@ -70,6 +70,9 @@ def get_rowcounts(sqls):
 
 sqls = exprdf["filtersql"].values
 print("going to execute ", len(sqls))
+print(exprdf.keys())
+pdb.set_trace()
+
 rowcs,totals = get_rowcounts(sqls)
 
 ### update estimates
