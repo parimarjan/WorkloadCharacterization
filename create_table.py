@@ -17,6 +17,7 @@ from sqlalchemy import create_engine
 
 ALIAS_TO_TABS = {}
 ALIAS_TO_TABS["n"] = "name"
+ALIAS_TO_TABS["n_unfilled"] = "name"
 ALIAS_TO_TABS["n2"] = "name"
 ALIAS_TO_TABS["mi"] = "movie_info"
 ALIAS_TO_TABS["t"] = "title"
@@ -43,7 +44,7 @@ else:
 
 USER="ceb"
 DBHOST="localhost"
-PORT=5434
+# args.port=5432
 PWD="password"
 
 WORKLOADS = {}
@@ -63,6 +64,8 @@ def read_flags():
 
     parser.add_argument("--data_kind", type=str, required=False,
             default="test", help="suffix for the table")
+    parser.add_argument("--port", type=int, required=False,
+            default=5432, help="")
 
     # parser.add_argument("--shuffle", type=int, required=False,
             # default=0, help="")
@@ -70,17 +73,14 @@ def read_flags():
     return parser.parse_args()
 
 def main():
-    # assert os.path.exists(args.inp_fn)
 
     if os.path.exists(args.inp_fn):
         df = pd.read_csv(args.inp_fn)
-
-        empty_cols = [col for col in df.columns if df[col].isnull().all()]
-        print("Dropping columns: ", empty_cols)
-        # Drop these columns from the dataframe
-        df.drop(empty_cols,
-                axis=1,
-                inplace=True)
+        # empty_cols = [col for col in df.columns if df[col].isnull().all()]
+        # print("Dropping columns: ", empty_cols)
+        # df.drop(empty_cols,
+                # axis=1,
+                # inplace=True)
 
         df = df.drop(columns="Unnamed: 0")
 
@@ -90,7 +90,7 @@ def main():
     new_table_name = NEW_NAME_FMT.format(INP = basetable,
                                      DATA_KIND = args.data_kind)
     drop_sql = DROP_TEMPLATE.format(TABLE_NAME = new_table_name)
-    con = pg.connect(user=USER, host=DBHOST, port=PORT,
+    con = pg.connect(user=USER, host=DBHOST, port=args.port,
             password=PWD, database=DBNAME)
 
     cursor = con.cursor()
@@ -114,7 +114,6 @@ def main():
     elif "shuffle" in args.data_kind:
         df = df.sample(frac=1.0)
 
-
     if args.data_kind == "true_cols":
         inp_table = ALIAS_TO_TABS[basetable]
         cols = ",".join(list(df.keys()))
@@ -124,7 +123,7 @@ def main():
         create_sql = CREATE_TEMPLATE.format(TABLE_NAME = new_table_name,
                                             SEL_SQL = sel_sql)
         print(create_sql)
-        con = pg.connect(user=USER, host=DBHOST, port=PORT,
+        con = pg.connect(user=USER, host=DBHOST, port=args.port,
                 password=PWD, database=DBNAME)
 
         cursor = con.cursor()
@@ -133,6 +132,7 @@ def main():
 
         cursor.close()
         con.close()
+
     elif args.data_kind == "random_domain":
         # update each column to be from same domain but randomly chosen
         newdf = copy.deepcopy(df)
@@ -144,7 +144,7 @@ def main():
         engine_cmd = ENGINE_CMD_FMT.format(USER = USER,
                                            PWD = PWD,
                                            HOST = DBHOST,
-                                           PORT = PORT,
+                                           PORT = args.port,
                                            DB = DBNAME)
 
         engine = create_engine(engine_cmd)
@@ -158,7 +158,7 @@ def main():
             domain = list(set(df[key].dropna()))
             print(domain)
             print(len(domain))
-            # domain.append(None)
+            domain.append(None)
             df[key] = np.array([random.choice(domain) for _ in range(len(df))])
 
         # df = newdf
@@ -166,7 +166,7 @@ def main():
         engine_cmd = ENGINE_CMD_FMT.format(USER = USER,
                                            PWD = PWD,
                                            HOST = DBHOST,
-                                           PORT = PORT,
+                                           PORT = args.port,
                                            DB = DBNAME)
 
         engine = create_engine(engine_cmd)
@@ -177,7 +177,7 @@ def main():
         engine_cmd = ENGINE_CMD_FMT.format(USER = USER,
                                            PWD = PWD,
                                            HOST = DBHOST,
-                                           PORT = PORT,
+                                           PORT = args.port,
                                            DB = DBNAME)
 
         engine = create_engine(engine_cmd)
@@ -193,7 +193,7 @@ def main():
         # engine_cmd = ENGINE_CMD_FMT.format(USER = USER,
                                            # PWD = PWD,
                                            # HOST = DBHOST,
-                                           # PORT = PORT,
+                                           # args.port = args.port,
                                            # DB = DBNAME)
 
         # engine = create_engine(engine_cmd)
@@ -203,7 +203,7 @@ def main():
         engine_cmd = ENGINE_CMD_FMT.format(USER = USER,
                                            PWD = PWD,
                                            HOST = DBHOST,
-                                           PORT = PORT,
+                                           PORT = args.port,
                                            DB = DBNAME)
         engine = create_engine(engine_cmd)
         df.to_sql(new_table_name, engine)

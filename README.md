@@ -1,5 +1,38 @@
 # WorkloadCharacterization
 
+### Creating workload files from sqls
+
+* use ParsingSQLs.ipynb or ParsingSQLs-zdbs.ipynb
+* once expr\_df is generated, we need to execute queries
+* ```bash python3 get_rowcounts.py``` w/ appropriate GLOBAL variables set in
+the script
+* ```bash python3 get_rowcounts_zdbs.py```
+
+### Running Evaluation for Generated Data
+
+#### IMDb version
+
+* have data files, `n.csv` etc.
+* create table using a data file and evaluate on it.
+  * ```bash
+  python3 create_table.py --inp_fn data/gen_data/new_data3/n.csv --port 5432 --data_kind gen_shuffle
+  python3 eval_data.py --inp_to_eval n --data_kind gen_shuffle --num_queries 100 --port 5432
+  ```
+  * --port 5432 is set on tebow to standard postgresql on docker; --port 5434 is set to 512mb limit version
+  * --data_kind
+    * --data_kind gen_shuffle ---> uses generated data file but just shuffles values
+    * --data_kind gen_shuffle2 ---> uses generated data file + replaces NULLs w/ random values + shuffles
+
+* create table using random values from the domain + evaluate
+
+  * E.g. of evaluating data gene
+  ```bash
+  python3 create_table.py --inp_fn n.csv --port 5432 --data_kind random_domain2
+  python3 eval_data.py --inp_to_eval n --data_kind random_domain2 --num_queries 100 --port 5432
+  ```
+
+#### SOSD version
+
 ### Brief Notes
 
 * For Non-SCOPE workloads, ParsingSQLs.ipynb file should handle going from SQL
