@@ -1,14 +1,43 @@
 # WorkloadCharacterization
 
+### PostgreSQL setup
+
+A lot of the scripts rely on PostgreSQL;
+
+* Follow instructions at: https://github.com/learnedsystems/ceb (under docker
+setup, to setup PostgreSQL IMDb in a docker container)
+
+Then in the following scripts, set the user,pwd,port appropriately to generate
+the ground truth data.
+
+* Downloading SQLs: for IMDb workloads, we can use:
+  * https://github.com/learnedsystems/CEB/blob/main/scripts/download_all_sqls.sh
+  * Put these SQLs in the same directory (set up ParsingSQLs in next step to
+      find the correct directory with SQLs in the first cells)
+
 ### Creating workload files from sqls
 
-* use ParsingSQLs.ipynb or ParsingSQLs-zdbs.ipynb
-* once expr\_df is generated, we need to execute queries
+Two steps, first parse sqls to extract expressions (similar to how they look
+    like in SCOPE)
+
+* Use ParsingSQLs.ipynb for general SQLs (tested on imdb,tpcds etc.)
+
+* (OR ParsingSQLs-zdbs.ipynb which are hardcoded for ziniu's db instances)
+
+* At this point, expr\_df.csv should have been generated. Then collect the
+cardinality estimate for each expression using:
+
 * ```bash python3 get_rowcounts.py``` w/ appropriate GLOBAL variables set in
-the script
+the script (WK=ceb global variable)
+* ```bash python3 get_const_rowcounts.py``` ---> produces literal\_df.csv,
+  which adds additional cardinality data with single constants to expr\_df.csv
+
+(for ziniu's db instances:)
 * ```bash python3 get_rowcounts_zdbs.py```
 
+
 ### Running Evaluation for Generated Data
+
 
 #### IMDb version
 
