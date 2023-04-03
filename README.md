@@ -35,7 +35,6 @@ the script (WK=ceb global variable)
 (for ziniu's db instances:)
 * ```bash python3 get_rowcounts_zdbs.py```
 
-
 ### Running Evaluation for Generated Data
 
 

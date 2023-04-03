@@ -30,7 +30,8 @@ ENGINE_CMD_FMT = """postgresql://{USER}:{PWD}@{HOST}:{PORT}/{DB}"""
 
 NULL_VAL = "#NULL1234"
 # WK = "tpch1"
-WK = "ceb"
+# WK = "ceb"
+WK = "financial"
 #WK = "tpcds1G"
 #WK = "tpcds"
 #WK = "job"
@@ -67,9 +68,6 @@ def read_flags():
     parser.add_argument("--port", type=int, required=False,
             default=5432, help="")
 
-    # parser.add_argument("--shuffle", type=int, required=False,
-            # default=0, help="")
-
     return parser.parse_args()
 
 def main():
@@ -85,7 +83,11 @@ def main():
         df = df.drop(columns="Unnamed: 0")
 
     basetable = os.path.basename(args.inp_fn).replace(".csv", "")
-    pg_orig_table = ALIAS_TO_TABS[basetable]
+
+    if basetable not in ALIAS_TO_TABS:
+        pg_orig_table = basetable
+    else:
+        pg_orig_table = ALIAS_TO_TABS[basetable]
 
     new_table_name = NEW_NAME_FMT.format(INP = basetable,
                                      DATA_KIND = args.data_kind)
@@ -114,10 +116,25 @@ def main():
     elif "shuffle" in args.data_kind:
         df = df.sample(frac=1.0)
 
+    fixedkeys = {}
+    for dk in df.keys():
+        fixedkeys[dk] = dk.replace('"','')
+    df = df.rename(columns=fixedkeys)
+    print(df.keys())
+
     if args.data_kind == "true_cols":
-        inp_table = ALIAS_TO_TABS[basetable]
+        if basetable not in ALIAS_TO_TABS:
+            inp_table = basetable
+        else:
+            inp_table = ALIAS_TO_TABS[basetable]
+
         cols = ",".join(list(df.keys()))
-        cols = "id," + cols
+
+        if DBNAME == "imdb":
+            cols = "id," + cols
+        elif DBNAME == "financial":
+            cols = "index," + cols
+
         sel_sql = "SELECT {} FROM {}".format(cols, inp_table)
         print(sel_sql)
         create_sql = CREATE_TEMPLATE.format(TABLE_NAME = new_table_name,
@@ -139,6 +156,7 @@ def main():
         for key in df.keys():
             domain = list(set(df[key].dropna()))
             newdf[key] = np.array([random.choice(domain) for _ in range(len(df))])
+            # newdf[key.replace('"','')] = np.array([random.choice(domain) for _ in range(len(df))])
 
         df = newdf
         engine_cmd = ENGINE_CMD_FMT.format(USER = USER,
@@ -173,7 +191,6 @@ def main():
         df.to_sql(new_table_name, engine)
 
     elif args.data_kind == "random_domain3":
-
         engine_cmd = ENGINE_CMD_FMT.format(USER = USER,
                                            PWD = PWD,
                                            HOST = DBHOST,
@@ -207,7 +224,6 @@ def main():
                                            DB = DBNAME)
         engine = create_engine(engine_cmd)
         df.to_sql(new_table_name, engine)
-
 
 args = read_flags()
 main()

@@ -8,6 +8,7 @@ import time
 
 # WK = "tpch1"
 WK = "ceb"
+#WK = "job"
 #WK = "tpcds1G"
 #WK = "tpcds"
 #WK = "job"
@@ -40,7 +41,10 @@ DATADIR = os.path.join(QDIR, "dfs")
 # print(exprdf.keys())
 
 EXPRFN = os.path.join(DATADIR, "expr_df.csv")
+OPFN = os.path.join(DATADIR, "op_df.csv")
+
 exprdf = pd.read_csv(EXPRFN)
+opdf = pd.read_csv(OPFN)
 
 LITERAL_DATA_FN = os.path.join(DATADIR, "literal_df.csv")
 
@@ -202,6 +206,7 @@ def get_rowcounts_consts(sqls, exprhashes, inputs, jobids):
         ehash = exprhashes[si]
         expr_inp = inputs[si]
         expr_jid = jobids[si]
+
         # per column-literal pair
         # per column,column - literal,literal pairs
         for curcol, colvals in coldata.items():
@@ -274,6 +279,7 @@ def get_rowcounts_consts(sqls, exprhashes, inputs, jobids):
     countdf = pd.DataFrame(countdata)
     return countdf
 
+exprdf = exprdf.sample(frac=0.0001)
 sqls = exprdf["filtersql"].values
 jobids = exprdf["jobid"].values
 inputs = exprdf["input"].values
@@ -286,15 +292,21 @@ print(len(sqls))
 start = time.time()
 rdata = get_rowcounts_consts(sqls, exprhashes, inputs, jobids)
 
-print("took: ", time.time()-start)
+# print("took: ", time.time()-start)
 
 rdata["Selectivity"] = rdata.apply(lambda x: float(x["RowCount"]) / x["InputCardinality"] ,axis=1)
 tmp2 = rdata[rdata["RowCount"] != -1]
-print(tmp2["Selectivity"].describe(percentiles=[0.75, 0.5, 0.9, 0.99]))
-print(rdata.keys())
+# print(tmp2["Selectivity"].describe(percentiles=[0.75, 0.5, 0.9, 0.99]))
+# print(rdata.keys())
+# print(opdf.keys())
+opdf = opdf.rename(columns={"column":"Column", "constant":"Value", "op":"Op"})
+print(opdf.keys())
+pdb.set_trace()
 
-print(LITERAL_DATA_FN)
+# print(LITERAL_DATA_FN)
 rdata.to_csv(LITERAL_DATA_FN, index=False)
+print(OPFN)
+opdf.to_csv(OPFN, index=False)
 
 pdb.set_trace()
 
